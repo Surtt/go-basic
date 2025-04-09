@@ -4,16 +4,15 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
-	"strings"
 )
 
-func main() {
-	const usdToEur = 0.91
-	const usdToRub = 84.44
-	const eurToRub = usdToRub / usdToEur
+const usdToEur = 0.91
+const usdToRub = 84.44
+const eurToRub = usdToRub / usdToEur
 
+func main() {
 	currency := askCurrency()
-	amount := askAmmount()
+	amount := askAmount()
 	targetCurrency := askTargetCurrency(currency)
 	converted, err := convert(amount, currency, targetCurrency)
 	if err != nil {
@@ -22,7 +21,7 @@ func main() {
 	}
 
 	fmt.Printf("You want to convert %.2f %s в %s\n", amount, currency, targetCurrency)
-	fmt.Printf("Result: %.2f %s = %.2f %s\n", amount, currency, converted, targetCurrency)
+	fmt.Printf("Result conversion: %.2f %s = %.2f %s\n", amount, currency, converted, targetCurrency)
 
 }
 
@@ -34,6 +33,7 @@ func usersInput(prompt string) (string, error) {
 }
 
 func askCurrency() string {
+	validCurrencies := map[string]bool{"USD": true, "EUR": true, "RUB": true}
 	for {
 		currency, err := usersInput("Enter a valid currency value (USD, EUR, RUB): ")
 
@@ -42,7 +42,7 @@ func askCurrency() string {
 			continue
 		}
 
-		if currency != "USD" && currency != "EUR" && currency != "RUB" {
+		if !validCurrencies[currency] {
 			err := errors.New("invalid currency")
 			fmt.Println(err)
 			continue
@@ -52,7 +52,7 @@ func askCurrency() string {
 	}
 }
 
-func askAmmount() float64 {
+func askAmount() float64 {
 
 	for {
 		amountStr, err := usersInput("Enter a valid ammount: ")
@@ -77,14 +77,15 @@ func askTargetCurrency(from string) string {
 	for {
 		fmt.Println("Available currencies: ")
 
-		options := []string{}
+		options := map[string]bool{}
 		for _, currency := range []string{"USD", "EUR", "RUB"} {
 			if currency != from {
-				options = append(options, currency)
+				options[currency] = true
+				fmt.Print(currency + " ")
 			}
 		}
 
-		fmt.Println(strings.Join(options, ", "))
+		fmt.Println()
 
 		targetCurrency, err := usersInput("Enter a target currency: ")
 
@@ -93,15 +94,7 @@ func askTargetCurrency(from string) string {
 			continue
 		}
 
-		valid := false
-		for _, option := range options {
-			if targetCurrency == option {
-				valid = true
-				break
-			}
-		}
-
-		if !valid {
+		if !options[targetCurrency] {
 			err := errors.New("invalid target currency")
 			fmt.Println(err)
 			continue
@@ -112,10 +105,6 @@ func askTargetCurrency(from string) string {
 }
 
 func convert(amount float64, from, to string) (float64, error) {
-	const usdToEur = 0.91
-	const usdToRub = 84.44
-	const eurToRub = usdToRub / usdToEur
-
 	switch from + "->" + to {
 	case "USD->EUR":
 		return amount * usdToEur, nil

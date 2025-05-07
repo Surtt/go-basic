@@ -105,21 +105,20 @@ func askTargetCurrency(from string) string {
 }
 
 func convert(amount float64, from, to string) (float64, error) {
-	switch from + "->" + to {
-	case "USD->EUR":
-		return amount * usdToEur, nil
-	case "USD->RUB":
-		return amount * usdToRub, nil
-	case "EUR->USD":
-		return amount / usdToEur, nil
-	case "EUR->RUB":
-		return amount * eurToRub, nil
-	case "RUB->USD":
-		return amount / usdToRub, nil
-	case "RUB->EUR":
-		return amount / eurToRub, nil
-	default:
-		return 0, errors.New("invalid conversion")
+	conversions := map[string]func(float64) float64{
+		"USD->EUR": func(a float64) float64 { return a * usdToEur },
+		"USD->RUB": func(a float64) float64 { return a * usdToRub },
+		"EUR->USD": func(a float64) float64 { return a / usdToEur },
+		"EUR->RUB": func(a float64) float64 { return a * eurToRub },
+		"RUB->USD": func(a float64) float64 { return a / usdToRub },
+		"RUB->EUR": func(a float64) float64 { return a / eurToRub },
 	}
 
+	key := from + "->" + to
+
+	if fn, ok := conversions[key]; ok {
+		return fn(amount), nil
+	}
+
+	return 0, errors.New("invalid conversion")
 }

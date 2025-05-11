@@ -9,7 +9,9 @@ import (
 	"bin/file"
 )
 
-func SaveBinList(binList bins.BinList, path string) error {
+type FileStorage struct{}
+
+func (fs *FileStorage) SaveBinList(binList bins.BinList, path string) error {
 	data, err := json.Marshal(binList)
 	if err != nil {
 		return err
@@ -17,7 +19,7 @@ func SaveBinList(binList bins.BinList, path string) error {
 	return os.WriteFile(path, data, 0644)
 }
 
-func LoadBinList(path string) (bins.BinList, error) {
+func (fs *FileStorage) LoadBinList(path string) (bins.BinList, error) {
 	if !file.IsJSON(path) {
 		return nil, errors.New("file is not json")
 	}

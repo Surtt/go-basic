@@ -37,6 +37,8 @@ func main() {
 
 	fmt.Printf("Прочитано %d новых бин(ов) из %s\n", len(newBins), newBinFile)
 
+	var storage storage.Storage = &storage.FileStorage{}
+
 	binList, err := storage.LoadBinList("bins.json")
 	if err != nil {
 		fmt.Println("bins.json не найден или пустой. Будет создан новый список.")

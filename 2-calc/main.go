@@ -8,20 +8,25 @@ import (
 	"strings"
 )
 
+var operations = map[string]func([]int) float64{
+	"SUM": sum,
+	"AVG": average,
+	"MED": median,
+}
+
 func main() {
 	operation := askOperation()
 	numbers := askNumbers()
-	result := selectCalculation(operation, numbers)
+	result := operations[operation](numbers)
 	fmt.Println(result)
 }
 
 func askOperation() string {
-	validOperations := map[string]bool{"AVG": true, "SUM": true, "MED": true}
 
 	for {
 		operation, err := usersInput("Enter a valid operation: ")
 
-		if !validOperations[operation] {
+		if _, ok := operations[operation]; !ok {
 			err = errors.New("Invalid operation")
 			fmt.Println(err)
 			continue
@@ -73,11 +78,11 @@ func usersInput(prompt string) (string, error) {
 	return input, err
 }
 
-func sum(numbers []int) int {
-	total := 0
+func sum(numbers []int) float64 {
+	var total float64
 
 	for _, n := range numbers {
-		total += n
+		total += float64(n)
 	}
 
 	return total

@@ -35,3 +35,5 @@ func (fs *FileStorage) LoadBinList(path string) (bins.BinList, error) {
 	}
 	return binList, nil
 }
+
+var _ Storage = (*FileStorage)(nil)

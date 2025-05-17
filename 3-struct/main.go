@@ -1,15 +1,28 @@
 package main
 
 import (
+	"bin/api"
 	"bin/bins"
+	"bin/config"
 	"bin/file"
 	"bin/storage"
 	"encoding/json"
 	"fmt"
 	"os"
+
+	"github.com/joho/godotenv"
 )
 
 func main() {
+
+	err := godotenv.Load()
+	if err != nil {
+		fmt.Println("Не удалось загрузить переменные окружения")
+	}
+
+	cfg := config.NewConfig()
+	api.GetKey(cfg)
+
 	if len(os.Args) < 2 {
 		fmt.Println("Укажите имя файла с бин, например: newbin.json")
 		return
@@ -36,6 +49,8 @@ func main() {
 	}
 
 	fmt.Printf("Прочитано %d новых бин(ов) из %s\n", len(newBins), newBinFile)
+
+	var storage storage.Storage = &storage.FileStorage{}
 
 	binList, err := storage.LoadBinList("bins.json")
 	if err != nil {

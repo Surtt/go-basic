@@ -7,6 +7,7 @@ import (
 	"bin/file"
 	"bin/storage"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"os"
 
@@ -14,10 +15,23 @@ import (
 )
 
 func main() {
-
 	err := godotenv.Load()
 	if err != nil {
 		fmt.Println("Не удалось загрузить переменные окружения")
+	}
+	get := flag.Bool("get", false, "Get bin by id")
+	// create := flag.String("create", "", "Create new bin")
+	// fileToRead := flag.String("file", "", "File to read")
+	// binName := flag.String("name", "", "Bin name")
+	binId := flag.String("id", "", "Bin id")
+	// list := flag.String("list", "", "Bin list")
+
+	flag.Parse()
+
+	if *get && *binId != "" {
+		cfg := config.NewConfig()
+		api.GetBinsById(*binId, cfg)
+		return
 	}
 
 	cfg := config.NewConfig()

@@ -20,22 +20,43 @@ func main() {
 		fmt.Println("Не удалось загрузить переменные окружения")
 	}
 	get := flag.Bool("get", false, "Get bin by id")
-	// create := flag.String("create", "", "Create new bin")
-	// fileToRead := flag.String("file", "", "File to read")
-	// binName := flag.String("name", "", "Bin name")
+	create := flag.Bool("create", false, "Create bin from file")
+	update := flag.Bool("update", false, "Update bin by ID")
+	delete := flag.Bool("delete", false, "Delete bin by ID")
+	list := flag.Bool("list", false, "List all bins")
+
+	fileToRead := flag.String("file", "", "Path to JSON file")
+	binName := flag.String("name", "", "Name of bin")
 	binId := flag.String("id", "", "Bin id")
-	// list := flag.String("list", "", "Bin list")
 
 	flag.Parse()
 
+	cfg := config.NewConfig()
+
 	if *get && *binId != "" {
-		cfg := config.NewConfig()
 		api.GetBinsById(*binId, cfg)
 		return
 	}
 
-	cfg := config.NewConfig()
-	api.GetKey(cfg)
+	if *create && *fileToRead != "" {
+		api.CreateBin(*fileToRead, *binName, cfg)
+		return
+	}
+
+	if *update && *fileToRead != "" && *binId != "" {
+		api.UpdateBin(*binId, *fileToRead, cfg)
+		return
+	}
+
+	if *delete && *binId != "" {
+		api.DeleteBin(*binId, cfg)
+		return
+	}
+
+	if *list {
+		api.ListBins(cfg)
+		return
+	}
 
 	if len(os.Args) < 2 {
 		fmt.Println("Укажите имя файла с бин, например: newbin.json")

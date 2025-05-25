@@ -188,18 +188,16 @@ func ListBins(cfg *config.Config) {
 	}
 }
 
-func CreateBinAndReturnID(filePath string, name string, cfg *config.Config) string {
+func CreateBinAndReturnID(filePath string, name string, cfg *config.Config) (string, error) {
 	data, err := os.ReadFile(filePath)
 	if err != nil {
-		fmt.Println("Error reading file:", err)
-		return ""
+		return "", fmt.Errorf("error reading file: %w", err)
 	}
 
 	var record map[string]any
 	err = json.Unmarshal(data, &record)
 	if err != nil {
-		fmt.Println("Invalid JSON:", err)
-		return ""
+		return "", fmt.Errorf("invalid JSON: %w", err)
 	}
 
 	body := map[string]any{
@@ -209,46 +207,74 @@ func CreateBinAndReturnID(filePath string, name string, cfg *config.Config) stri
 		body["name"] = name
 	}
 
-	jsonBody, _ := json.Marshal(body)
+	jsonBody, err := json.Marshal(body)
+	if err != nil {
+		return "", fmt.Errorf("error marshaling JSON: %w", err)
+	}
 
-	req, _ := http.NewRequest(http.MethodPost, "https://api.jsonbin.io/v3/b", strings.NewReader(string(jsonBody)))
+	req, err := http.NewRequest(http.MethodPost, "https://api.jsonbin.io/v3/b", strings.NewReader(string(jsonBody)))
+	if err != nil {
+		return "", fmt.Errorf("error creating request: %w", err)
+	}
+
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-Master-Key", cfg.Key)
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		fmt.Println("Request failed:", err)
-		return ""
+		return "", fmt.Errorf("request failed: %w", err)
 	}
 	defer resp.Body.Close()
 
-	respBody, _ := io.ReadAll(resp.Body)
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("error reading response body: %w", err)
+	}
+
 	var result struct {
 		Metadata struct {
 			ID string `json:"id"`
 		} `json:"metadata"`
 	}
-	_ = json.Unmarshal(respBody, &result)
+	err = json.Unmarshal(respBody, &result)
+	if err != nil {
+		return "", fmt.Errorf("error unmarshaling response: %w", err)
+	}
 
-	return result.Metadata.ID
+	return result.Metadata.ID, nil
 }
 
-func GetBinById(id string, cfg *config.Config) map[string]any {
+func GetBinById(id string, cfg *config.Config) (map[string]any, error) {
 	url := fmt.Sprintf("https://api.jsonbin.io/v3/b/%s/latest", id)
-	req, _ := http.NewRequest(http.MethodGet, url, nil)
+
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("error creating request: %w", err)
+	}
 	req.Header.Set("X-Master-Key", cfg.Key)
 
 	resp, err := http.DefaultClient.Do(req)
-	if err != nil || resp.StatusCode != 200 {
-		return nil
+	if err != nil {
+		return nil, fmt.Errorf("http error: %w", err)
 	}
 	defer resp.Body.Close()
 
-	body, _ := io.ReadAll(resp.Body)
-	var result struct {
+	if resp.StatusCode != 200 {
+		return nil, fmt.Errorf("unexpected status: %d", resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("reading body: %w", err)
+	}
+
+	var wrapper struct {
 		Record map[string]any `json:"record"`
 	}
-	_ = json.Unmarshal(body, &result)
+	err = json.Unmarshal(body, &wrapper)
+	if err != nil {
+		return nil, fmt.Errorf("unmarshal: %w", err)
+	}
 
-	return result.Record
+	return wrapper.Record, nil
 }

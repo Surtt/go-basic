@@ -19,65 +19,78 @@ func TestMain(m *testing.M) {
 
 func writeTempJSON(t *testing.T, data map[string]any, filename string) {
 	t.Helper()
-	bytes, _ := json.Marshal(data)
-	_ = os.WriteFile(filename, bytes, 0644)
+	bytes, err := json.Marshal(data)
+	if err != nil {
+		t.Fatalf("marshal error: %v", err)
+	}
+	if err := os.WriteFile(filename, bytes, 0644); err != nil {
+		t.Fatalf("write file error: %v", err)
+	}
 }
 
 func TestCreateBinAndGet(t *testing.T) {
 	cfg := config.NewConfig()
 	data := map[string]any{"foo": "bar"}
-	writeTempJSON(t, data, "temp-create.json")
-	defer os.Remove("temp-create.json")
+	writeTempJSON(t, data, "create.json")
+	defer os.Remove("create.json")
 
-	id := api.CreateBinAndReturnID("temp-create.json", "TestBin", cfg)
-	if id == "" {
-		t.Fatal("Bin was not created")
+	id, err := api.CreateBinAndReturnID("create.json", "TestBin", cfg)
+	if err != nil {
+		t.Fatalf("Create failed: %v", err)
 	}
+	defer api.DeleteBin(id, cfg)
 
-	res := api.GetBinById(id, cfg)
-
-	inner, ok := res["record"].(map[string]any)
-	if !ok || inner["foo"] != "bar" {
-		t.Errorf("Expected foo=bar, got %v", res)
+	record, err := api.GetBinById(id, cfg)
+	if err != nil {
+		t.Fatalf("Get failed: %v", err)
 	}
-
-	api.DeleteBin(id, cfg)
+	if record["foo"] != "bar" {
+		t.Errorf("Expected foo=bar, got %v", record)
+	}
 }
 
 func TestUpdateBinAndGet(t *testing.T) {
 	cfg := config.NewConfig()
-	initial := map[string]any{"key": "old"}
+	original := map[string]any{"key": "old"}
 	updated := map[string]any{"key": "new"}
 
-	writeTempJSON(t, initial, "temp-init.json")
-	defer os.Remove("temp-init.json")
+	writeTempJSON(t, original, "original.json")
+	defer os.Remove("original.json")
 
-	id := api.CreateBinAndReturnID("temp-init.json", "UpdateTest", cfg)
+	id, err := api.CreateBinAndReturnID("original.json", "UpdateTest", cfg)
+	if err != nil {
+		t.Fatalf("Create failed: %v", err)
+	}
 	defer api.DeleteBin(id, cfg)
 
-	writeTempJSON(t, updated, "temp-update.json")
-	defer os.Remove("temp-update.json")
+	writeTempJSON(t, updated, "updated.json")
+	defer os.Remove("updated.json")
 
-	api.UpdateBin(id, "temp-update.json", cfg)
-	res := api.GetBinById(id, cfg)
+	api.UpdateBin(id, "updated.json", cfg)
 
-	inner, ok := res["record"].(map[string]any)
-	if !ok || inner["key"] != "new" {
-		t.Errorf("Expected key=new, got %v", res)
+	record, err := api.GetBinById(id, cfg)
+	if err != nil {
+		t.Fatalf("Get failed: %v", err)
+	}
+	if record["key"] != "new" {
+		t.Errorf("Expected key=new, got %v", record)
 	}
 }
 
-func TestDeleteBin(t *testing.T) {
+func TestDeleteBinConfirm(t *testing.T) {
 	cfg := config.NewConfig()
-	data := map[string]any{"delete": true}
-	writeTempJSON(t, data, "temp-delete.json")
-	defer os.Remove("temp-delete.json")
+	data := map[string]any{"toDelete": true}
+	writeTempJSON(t, data, "del.json")
+	defer os.Remove("del.json")
 
-	id := api.CreateBinAndReturnID("temp-delete.json", "DeleteTest", cfg)
+	id, err := api.CreateBinAndReturnID("del.json", "DelTest", cfg)
+	if err != nil {
+		t.Fatalf("Create failed: %v", err)
+	}
 	api.DeleteBin(id, cfg)
 
-	result := api.GetBinById(id, cfg)
-	if result != nil {
-		t.Error("Bin was not deleted")
+	record, err := api.GetBinById(id, cfg)
+	if err == nil && record != nil {
+		t.Errorf("Expected bin to be deleted, but got: %v", record)
 	}
 }

@@ -45,7 +45,7 @@ func CreateBin(filename string, name string, cfg *config.Config) {
 		return
 	}
 
-	body := map[string]interface{}{
+	body := map[string]any{
 		"record": json.RawMessage(data),
 	}
 
@@ -186,4 +186,69 @@ func ListBins(cfg *config.Config) {
 		fmt.Printf("%d. %s | id=%s | private=%t | created=%s\n",
 			i+1, bin.Name, bin.Id, bin.Private, bin.CreatedAt.Format("2006-01-02 15:04:05"))
 	}
+}
+
+func CreateBinAndReturnID(filePath string, name string, cfg *config.Config) string {
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		fmt.Println("Error reading file:", err)
+		return ""
+	}
+
+	var record map[string]any
+	err = json.Unmarshal(data, &record)
+	if err != nil {
+		fmt.Println("Invalid JSON:", err)
+		return ""
+	}
+
+	body := map[string]any{
+		"record": json.RawMessage(data),
+	}
+	if name != "" {
+		body["name"] = name
+	}
+
+	jsonBody, _ := json.Marshal(body)
+
+	req, _ := http.NewRequest(http.MethodPost, "https://api.jsonbin.io/v3/b", strings.NewReader(string(jsonBody)))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Master-Key", cfg.Key)
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		fmt.Println("Request failed:", err)
+		return ""
+	}
+	defer resp.Body.Close()
+
+	respBody, _ := io.ReadAll(resp.Body)
+	var result struct {
+		Metadata struct {
+			ID string `json:"id"`
+		} `json:"metadata"`
+	}
+	_ = json.Unmarshal(respBody, &result)
+
+	return result.Metadata.ID
+}
+
+func GetBinById(id string, cfg *config.Config) map[string]any {
+	url := fmt.Sprintf("https://api.jsonbin.io/v3/b/%s/latest", id)
+	req, _ := http.NewRequest(http.MethodGet, url, nil)
+	req.Header.Set("X-Master-Key", cfg.Key)
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil || resp.StatusCode != 200 {
+		return nil
+	}
+	defer resp.Body.Close()
+
+	body, _ := io.ReadAll(resp.Body)
+	var result struct {
+		Record map[string]any `json:"record"`
+	}
+	_ = json.Unmarshal(body, &result)
+
+	return result.Record
 }

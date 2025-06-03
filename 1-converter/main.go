@@ -10,11 +10,20 @@ const usdToEur = 0.91
 const usdToRub = 84.44
 const eurToRub = usdToRub / usdToEur
 
+var conversions = map[string]func(float64) float64{
+	"USD->EUR": func(a float64) float64 { return a * usdToEur },
+	"USD->RUB": func(a float64) float64 { return a * usdToRub },
+	"EUR->USD": func(a float64) float64 { return a / usdToEur },
+	"EUR->RUB": func(a float64) float64 { return a * eurToRub },
+	"RUB->USD": func(a float64) float64 { return a / usdToRub },
+	"RUB->EUR": func(a float64) float64 { return a / eurToRub },
+}
+
 func main() {
 	currency := askCurrency()
 	amount := askAmount()
 	targetCurrency := askTargetCurrency(currency)
-	converted, err := convert(amount, currency, targetCurrency)
+	converted, err := convert(amount, currency, targetCurrency, &conversions)
 	if err != nil {
 		fmt.Println("Error during conversion", err)
 		return
@@ -104,19 +113,10 @@ func askTargetCurrency(from string) string {
 	}
 }
 
-func convert(amount float64, from, to string) (float64, error) {
-	conversions := map[string]func(float64) float64{
-		"USD->EUR": func(a float64) float64 { return a * usdToEur },
-		"USD->RUB": func(a float64) float64 { return a * usdToRub },
-		"EUR->USD": func(a float64) float64 { return a / usdToEur },
-		"EUR->RUB": func(a float64) float64 { return a * eurToRub },
-		"RUB->USD": func(a float64) float64 { return a / usdToRub },
-		"RUB->EUR": func(a float64) float64 { return a / eurToRub },
-	}
-
+func convert(amount float64, from, to string, conversions *map[string]func(float64) float64) (float64, error) {
 	key := from + "->" + to
 
-	if fn, ok := conversions[key]; ok {
+	if fn, ok := (*conversions)[key]; ok {
 		return fn(amount), nil
 	}
 

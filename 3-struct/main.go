@@ -34,7 +34,13 @@ func main() {
 	cfg := config.NewConfig()
 
 	if *get && *binId != "" {
-		api.GetBinsById(*binId, cfg)
+		record, err := api.GetBinById(*binId, cfg)
+		if err != nil {
+			fmt.Println("Error getting bin:", err)
+			return
+		}
+		data, _ := json.MarshalIndent(record, "", "  ")
+		fmt.Println(string(data))
 		return
 	}
 

@@ -37,9 +37,9 @@ func askOperation() string {
 }
 
 func askNumbers() []int {
-	var numbers []int
-	valid := true
 	for {
+		var numbers []int
+		valid := true
 		numbersStr, err := usersInput("Enter numbers separated by commas (e.g. 1,2,3): ")
 
 		if err != nil {

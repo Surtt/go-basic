@@ -113,17 +113,3 @@ func median(numbers []int) float64 {
 		return float64(sorted[middle])
 	}
 }
-
-func selectCalculation(operation string, numbers []int) float64 {
-	switch operation {
-	case "SUM":
-		return float64(sum(numbers))
-	case "AVG":
-		return average(numbers)
-	case "MED":
-		return median(numbers)
-	default:
-		fmt.Println("Unknown operation")
-		return 0
-	}
-}

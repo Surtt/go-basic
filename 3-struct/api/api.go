@@ -4,6 +4,7 @@ import (
 	"bin/bins"
 	"bin/config"
 	"bin/file"
+	"bin/storage"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -84,11 +85,10 @@ func CreateBin(filename string, name string, cfg *config.Config) {
 	fmt.Println(string(respBody))
 }
 
-func UpdateBin(id string, filename string, cfg *config.Config) {
+func UpdateBin(id string, filename string, cfg *config.Config) error {
 	data, err := os.ReadFile(filename)
 	if err != nil {
-		fmt.Println("Error while reading file", err)
-		return
+		return fmt.Errorf("Error while reading file:  %w", err)
 	}
 
 	body := map[string]json.RawMessage{
@@ -97,15 +97,13 @@ func UpdateBin(id string, filename string, cfg *config.Config) {
 
 	jsonBody, err := json.Marshal(body)
 	if err != nil {
-		fmt.Println("Error while marshaling JSON", err)
-		return
+		return fmt.Errorf("Error while marshaling JSON:  %w", err)
 	}
 
 	url := fmt.Sprintf("https://api.jsonbin.io/v3/b/%s", id)
 	req, err := http.NewRequest(http.MethodPut, url, strings.NewReader(string(jsonBody)))
 	if err != nil {
-		fmt.Println("Error while creating request", err)
-		return
+		return fmt.Errorf("Error while creating request:  %w", err)
 	}
 
 	req.Header.Set("Content-Type", "application/json")
@@ -113,22 +111,22 @@ func UpdateBin(id string, filename string, cfg *config.Config) {
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		fmt.Println("Error while sending request", err)
-		return
+		return fmt.Errorf("Error while sending request:  %w", err)
 	}
 	defer resp.Body.Close()
 
 	respData, err := io.ReadAll(resp.Body)
 	if err != nil {
-		fmt.Println("Error while reading response body", err)
-		return
+		return fmt.Errorf("Error while reading response body:  %w", err)
 	}
 
 	fmt.Println("Updated bin")
 	fmt.Println(string(respData))
+
+	return nil
 }
 
-func DeleteBin(id string, cfg *config.Config) {
+func DeleteBin(id string, cfg *config.Config, store storage.Storage) {
 	url := fmt.Sprintf("https://api.jsonbin.io/v3/b/%s", id)
 
 	req, err := http.NewRequest(http.MethodDelete, url, nil)
@@ -154,6 +152,26 @@ func DeleteBin(id string, cfg *config.Config) {
 
 	fmt.Println("Deleted bin")
 	fmt.Println(string(body))
+
+	const path = "bins.json"
+	storage := &storage.FileStorage{}
+	binList, err := storage.LoadBinList(path)
+	if err != nil {
+		fmt.Println("Error loading bins.json:", err)
+		return
+	}
+
+	newList := make(bins.BinList, 0)
+	for _, b := range binList {
+		if b.Id != id {
+			newList = append(newList, b)
+		}
+	}
+
+	err = storage.SaveBinList(newList, path)
+	if err != nil {
+		fmt.Println("Error saving bins.json:", err)
+	}
 }
 
 func ListBins(cfg *config.Config) {
@@ -239,6 +257,11 @@ func CreateBinAndReturnID(filePath string, name string, cfg *config.Config) (str
 	err = json.Unmarshal(respBody, &result)
 	if err != nil {
 		return "", fmt.Errorf("error unmarshaling response: %w", err)
+	}
+
+	bin := bins.NewBin(result.Metadata.ID, true, name)
+	if err := bins.Save(bin); err != nil {
+		fmt.Println("Warning: failed to save bin locally:", err)
 	}
 
 	return result.Metadata.ID, nil

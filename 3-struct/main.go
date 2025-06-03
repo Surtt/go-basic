@@ -39,7 +39,19 @@ func main() {
 	}
 
 	if *create && *fileToRead != "" {
-		api.CreateBin(*fileToRead, *binName, cfg)
+		id, err := api.CreateBinAndReturnID(*fileToRead, *binName, cfg)
+		if err != nil {
+			fmt.Println("❌ Error while creating bin:", err)
+			return
+		}
+
+		bin := bins.NewBin(id, true, *binName)
+		if err := bins.Save(bin); err != nil {
+			fmt.Println("❌ Error while saving bin to bins.json:", err)
+			return
+		}
+
+		fmt.Println("✅ Bin created with ID:", id)
 		return
 	}
 
@@ -49,7 +61,8 @@ func main() {
 	}
 
 	if *delete && *binId != "" {
-		api.DeleteBin(*binId, cfg)
+		store := &storage.FileStorage{}
+		api.DeleteBin(*binId, cfg, store)
 		return
 	}
 

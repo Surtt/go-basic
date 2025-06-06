@@ -13,6 +13,10 @@ func ReadFile(path string) ([]byte, error) {
 	return data, nil
 }
 
+func WriteFile(path string, data []byte) error {
+	return os.WriteFile(path, data, 0644)
+}
+
 func IsJSON(path string) bool {
 	return strings.HasSuffix(path, ".json")
 }
